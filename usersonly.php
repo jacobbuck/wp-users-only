@@ -1,6 +1,7 @@
 <?php
 /*
 Plugin Name: Users Only
+Plugin URI: https://github.com/jacobbuck/wp-users-only
 Description: Restricts a Wordpress website to logged in users only and redirects unauthorised visitors to login page.
 Version: 1.0
 Author: Jacob Buck
