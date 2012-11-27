@@ -3,7 +3,7 @@
 Plugin Name: Users Only
 Plugin URI: https://github.com/jacobbuck/wp-users-only
 Description: Restrict a website to logged in users only, and disable the dashboard for non-admin user types.
-Version: 2.0
+Version: 2.1
 Author: Jacob Buck
 Author URI: http://jacobbuck.co.nz/
 */
@@ -20,7 +20,7 @@ class Users_Only {
 		add_filter( 'plugin_action_links', array( &$this, 'add_settings_link' ), 10, 2 );
 
 		/* Users Only Actions */
-		add_action( 'init', array( &$this, 'init') );
+		add_action( 'init', array( &$this, 'init'), 5 );
 		add_action( 'admin_init', array( &$this, 'admin_init') );
 		add_action( 'login_head', array( &$this, 'login_head') );
 		add_action( 'template_redirect', array( &$this, 'template_redirect') );
@@ -75,11 +75,16 @@ class Users_Only {
 
 		/* Do action */
 		switch ( get_option('wpuo_lo_action') ) {
+			case '':
+				/**
+				 * Do nothing
+				 */
+				break;
 			case 'wp-login':
 				/**
 				 * Redirect to WordPress Login
 				 */
-				wp_redirect( wp_login_url( home_url() ), 302 );
+				wp_redirect( wp_login_url( home_url( $_SERVER['REQUEST_URI'] ) ), 302 );
 				exit;
 				break;
 			case 'page':
@@ -88,9 +93,13 @@ class Users_Only {
 				 */
 				$lo_pageid = get_option('wpuo_lo_pageid');
 				/* Check if we're already on the page */
-				if ( get_the_ID() != $lo_pageid ) {
+				if ( ! is_page() || get_the_ID() != $lo_pageid ) {
 					/* Otherwise redirect to the page */
-					if ( false !== wp_redirect( get_permalink( $lo_pageid ), 302 ) )
+					$redirect_to = get_permalink( $lo_pageid );
+					/* Add referer query to redirect url */
+					if ( untrailingslashit( $_SERVER['REQUEST_URI'] ) )
+						$redirect_to = add_query_arg( 'ref', urlencode( home_url( $_SERVER['REQUEST_URI'] ) ), $redirect_to );
+					if ( false !== wp_redirect( $redirect_to, 302 ) )
 						exit;
 				}
 				break;
@@ -108,8 +117,6 @@ class Users_Only {
 					exit;
 				break;
 		}
-
-		/* Otherwise do nothing */
 
 	}
 
@@ -146,7 +153,7 @@ class Users_Only {
 
 				<?php wp_nonce_field( plugin_basename( __FILE__ ), 'wpuo_nonce' ); ?>
 
-				<h3 class="title">Logged In</h3>
+				<h3 class="title"><?php _e('Logged In'); ?></h3>
 
 				<table class="form-table">
 					<tr>
@@ -165,7 +172,7 @@ class Users_Only {
 					</tr>
 				</table>
 
-				<h3 class="title">Logged Out</h3>
+				<h3 class="title"><?php _e('Logged Out'); ?></h3>
 
 				<table class="form-table">
 					<tr>
