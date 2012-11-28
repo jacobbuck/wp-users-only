@@ -3,9 +3,6 @@ class Users_Only_Settings extends Users_Only {
 
 	static function initialize () {
 
-		if ( ! is_admin() )
-			return;
-
 		add_action( 'admin_init', array( 'Users_Only_Settings', 'save_options') );
 		add_action( 'admin_menu', array( 'Users_Only_Settings', 'admin_menu') );
 		add_filter( 'plugin_action_links', array( 'Users_Only_Settings', 'filter_add_settings_link' ), 10, 2 );
