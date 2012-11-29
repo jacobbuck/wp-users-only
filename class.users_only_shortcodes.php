@@ -1,7 +1,7 @@
 <?php
 class Users_Only_Shortcodes extends Users_Only {
 
-	static function initialize () {
+	public static function initialize () {
 
 		add_shortcode( 'wpuo-login-form', array( 'Users_Only_Shortcodes', 'login_form_shortcode' ) );
 		add_shortcode( 'wpuo-profile-form', array( 'Users_Only_Shortcodes', 'profile_form_shortcode' ) );
@@ -12,9 +12,9 @@ class Users_Only_Shortcodes extends Users_Only {
 	 * Login form shortcode - [wpuo-login-form]
 	 */
 
-	static function login_form_shortcode () {
+	public static function login_form_shortcode () {
 
-		if ( 0 === parent::$current_user->ID )
+		if ( ! parent::$current_user->ID )
 			return wp_login_form ( array (
 				'echo' => false,
 				'redirect' => isset( $_GET['ref'] ) ? $_GET['ref'] : home_url()
@@ -32,10 +32,10 @@ class Users_Only_Shortcodes extends Users_Only {
 	 * Profile form shortcode - [wpuo-profile-form]
 	 */
 
-	static function profile_form_shortcode () {
+	public static function profile_form_shortcode () {
 
-		if ( 0 === parent::$current_user->ID )
-			return;
+		if ( ! parent::$current_user->ID || ! parent::$current_user->has_cap('read') )
+			return '';
 
 		ob_start();
 
@@ -68,7 +68,7 @@ class Users_Only_Shortcodes extends Users_Only {
 				<label for="profile-password-confirm"><?php _e('Confirm New Password'); ?></label>
 				<input type="password" name="profile-password-confirm" id="profile-password-confirm" class="text-input" />
 			</p>
-			<p class="profile-form-submit"><input type="submit" name="submit" class="submit button" value="<?php _e('Update'); ?>" /></p>
+			<p class="profile-form-submit"><input type="submit" name="submit" class="button-primary" value="<?php _e('Update'); ?>" /></p>
 		</form>
 		<?php
 
@@ -76,7 +76,7 @@ class Users_Only_Shortcodes extends Users_Only {
 
 	}
 
-	static function profile_form_shortcode_init () {
+	private static function profile_form_shortcode_init () {
 
 		/* Check nonce */
 		if (
@@ -94,9 +94,9 @@ class Users_Only_Shortcodes extends Users_Only {
 		) {
 			$email = $_POST['profile-email'];
 			if ( ! is_email( $email ) )
-				echo '<p class="message error">', __('Please enter your correct email address.'), '</p>';
+				echo '<p class="alert alert-error">', __('Please enter your correct email address.'), '</p>';
 			elseif ( email_exists( $email ) )
-				echo '<p class="message error">', __('This email is already registered, please choose another one.'), '</p>';
+				echo '<p class="alert alert-error">', __('This email is already registered, please choose another one.'), '</p>';
 			else
 				$userdata['user_email'] = $email;
 		}
@@ -108,7 +108,7 @@ class Users_Only_Shortcodes extends Users_Only {
 		) {
 			$firstname = trim( $_POST['profile-firstname'] );
 			if ( empty( $firstname ) )
-				echo '<p class="message error">', __('Please enter your first name.'), '</p>';
+				echo '<p class="alert alert-error">', __('Please enter your first name.'), '</p>';
 			else
 				$userdata['first_name'] = $firstname;
 		}
@@ -120,7 +120,7 @@ class Users_Only_Shortcodes extends Users_Only {
 		) {
 			$lastname = trim( $_POST['profile-lastname'] );
 			if ( empty( $lastname ) )
-				echo '<p class="message error">', __('Please enter your last name.'), '</p>';
+				echo '<p class="alert alert-error">', __('Please enter your last name.'), '</p>';
 			else
 				$userdata['last_name'] = $lastname;
 		}
@@ -138,12 +138,12 @@ class Users_Only_Shortcodes extends Users_Only {
 			if ( $_POST['profile-password'] === $_POST['profile-password-confirm'] )
 				$userdata['user_pass'] = $_POST['profile-password'];
 			else
-				echo '<p class="message error">', __('Please enter the same password in the two password fields.'), '</p>';
+				echo '<p class="alert alert-error">', __('Please enter the same password in the two password fields.'), '</p>';
 		}
 
 		/* Save changes */
 		if ( wp_update_user( $userdata ) )
-			echo '<p class="message">', __('Profile updated.'), '</p>';
+			echo '<p class="alert alert-success">', __('Profile updated.'), '</p>';
 
 		/* Update current user */
 		parent::$current_user = wp_get_current_user();

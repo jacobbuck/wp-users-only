@@ -1,7 +1,7 @@
 <?php
 class Users_Only_Settings extends Users_Only {
 
-	static function initialize () {
+	public static function initialize () {
 
 		add_action( 'admin_init', array( 'Users_Only_Settings', 'save_options') );
 		add_action( 'admin_menu', array( 'Users_Only_Settings', 'admin_menu') );
@@ -9,7 +9,7 @@ class Users_Only_Settings extends Users_Only {
 
 	}
 
-	static function admin_menu () {
+	public static function admin_menu () {
 
 		add_options_page(
 			__('Users Only'),
@@ -21,7 +21,7 @@ class Users_Only_Settings extends Users_Only {
 
 	}
 
-	static function options_page_cb () {
+	public static function options_page_cb () {
 
 		/* Logged In Options */
 		$li_disabledashboard = (array) get_option('wpuo_li_disabledashboard');
@@ -112,7 +112,7 @@ class Users_Only_Settings extends Users_Only {
 		<?php
 	}
 
-	static function save_options () {
+	public static function save_options () {
 
 		/* Nonce Validation */
 		if ( empty( $_POST['wpuo_nonce'] ) || ! wp_verify_nonce( $_POST['wpuo_nonce'], plugin_basename( __FILE__ ) ) )
@@ -131,7 +131,7 @@ class Users_Only_Settings extends Users_Only {
 
 	}
 
-	static function add_settings_link ( $links, $file ) {
+	public static function add_settings_link ( $links, $file ) {
 
 		if ( strstr( __FILE__, $file ) )
 			array_push( $links, '<a href="' . admin_url('options-general.php?page=users-only') . '">' . __('Settings') . '</a>' );

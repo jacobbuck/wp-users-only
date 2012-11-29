@@ -17,7 +17,7 @@ class Users_Only {
 	 * Users Only
 	 */
 
-	static function wp_init () {
+	public static function wp_init () {
 
 		/* Get current user */
 		self::$current_user = wp_get_current_user();
@@ -30,7 +30,7 @@ class Users_Only {
 		) {
 			$li_disabledashboard = (array) get_option('wpuo_li_disabledashboard');
 			foreach ( $li_disabledashboard as $role ) {
-				if ( isset( self::$current_user->caps[ $role ] ) ) {
+				if ( self::$current_user->has_cap( $role ) ) {
 					self::$is_disable_dashboard = true;
 					break;
 				}
@@ -44,7 +44,7 @@ class Users_Only {
 
 	}
 
-	static function admin_init () {
+	public static function admin_init () {
 		if ( self::$is_disable_dashboard ) {
 			/* Redirect if user can't access dashboard */
 			wp_redirect( home_url(), 302 );
@@ -52,17 +52,17 @@ class Users_Only {
 		}
 	}
 
-	static function login_head () {
+	public static function login_head () {
 		if ( 'wp-login' === get_option('wpuo_lo_action') ) {
 			/* Hide back to blog link */
 			echo '<style>#backtoblog{display:none}</style>';
 		}
 	}
 
-	static function template_redirect () {
+	public static function template_redirect () {
 
 		/* Check if user logged in */
-		if ( 0 !== self::$current_user->ID )
+		if ( ! self::$current_user->ID )
 			return;
 
 		/* Do action */
