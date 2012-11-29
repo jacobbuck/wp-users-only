@@ -62,7 +62,7 @@ class Users_Only {
 	public static function template_redirect () {
 
 		/* Check if user logged in */
-		if ( ! self::$current_user->ID )
+		if ( self::$current_user->ID )
 			return;
 
 		/* Do action */
