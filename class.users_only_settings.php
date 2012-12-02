@@ -3,13 +3,13 @@ class Users_Only_Settings extends Users_Only {
 
 	public static function initialize () {
 
-		add_action( 'admin_init', array( 'Users_Only_Settings', 'save_options') );
-		add_action( 'admin_menu', array( 'Users_Only_Settings', 'admin_menu') );
+		add_action( 'admin_init', array( 'Users_Only_Settings', 'wp_save_options') );
+		add_action( 'admin_menu', array( 'Users_Only_Settings', 'wp_admin_menu') );
 		add_filter( 'plugin_action_links', array( 'Users_Only_Settings', 'filter_add_settings_link' ), 10, 2 );
 
 	}
 
-	public static function admin_menu () {
+	public static function wp_admin_menu () {
 
 		add_options_page(
 			__('Users Only'),
@@ -22,13 +22,6 @@ class Users_Only_Settings extends Users_Only {
 	}
 
 	public static function options_page_cb () {
-
-		/* Logged In Options */
-		$li_disabledashboard = (array) get_option('wpuo_li_disabledashboard');
-
-		/* Logged Out Options */
-		$lo_action = get_option('wpuo_lo_action');
-		$lo_pageid = get_option('wpuo_lo_pageid');
 
 		?>
 		<div class="wrap">
@@ -51,8 +44,9 @@ class Users_Only_Settings extends Users_Only {
 							foreach ( (array) $wp_roles->role_names as $role => $name ) {
 								if ( 'administrator' === $role )
 									continue;
-								echo '<input type="checkbox" name="wpuo_li_disabledashboard[]"', checked( in_array( $role, $li_disabledashboard ) ) ,' value="', $role, '" />';
-								echo '&nbsp; <label for="">', __( $name ), '</label><br />';
+								echo '<label><input type="checkbox" name="wpuo_disable_dashboard[]"';
+								echo checked( in_array( $role, self::$options['disable_dashboard'] ) );
+								echo ' value="', $role, '" /> &nbsp; ', __( $name ), '</label><br />';
 							}
 							?>
 						</td>
@@ -63,39 +57,40 @@ class Users_Only_Settings extends Users_Only {
 
 				<table class="form-table">
 					<tr>
-						<th class="row"><label for="wpuo_lo_action"><?php _e('Action'); ?></label></th>
+						<th class="row"><label for="wpuo_logged_out_action"><?php _e('Action'); ?></label></th>
 						<td>
-							<select name="wpuo_lo_action" id="wpuo_lo_action">
+							<select name="wpuo_logged_out_action" id="wpuo_logged_out_action">
 								<option value=""
 									<?php
-									selected('' === $lo_action);
+									selected( '' === self::$options['logged_out_action'] );
 									?>><?php _e('Do nothing'); ?></option>
 								<option value="wp-login" <?php
-									selected('wp-login' === $lo_action);
+									selected( 'wp-login' === self::$options['logged_out_action'] );
 									?>><?php _e('Redirect to WordPress login'); ?></option>
 								<option value="page" <?php
-									selected('page' === $lo_action);
+									selected( 'page' === self::$options['logged_out_action'] );
 									?>><?php _e('Redirect to page'); ?></option>
 								<option value="holding" <?php
-									selected('holding' === $lo_action);
+									selected( 'holding' === self::$options['logged_out_action'] );
 									disabled( ! locate_template( array('holding.php') ) );
 									?>><?php _e('Display holding page') ?></option>
 							</select>&nbsp;
 							<?php
 							wp_dropdown_pages( array(
-								'post_type'   => 'page',
-								'name'        => 'wpuo_lo_pageid',
-								'sort_column' => 'menu_order, post_title',
-								'post_status' => 'publish',
-								'selected'    =>  $lo_pageid
+								'post_type'        => 'page',
+								'name'             => 'wpuo_logged_out_page_id',
+								'sort_column'      => 'menu_order, post_title',
+								'post_status'      => 'publish',
+								'selected'         =>  self::$options['logged_out_page_id'],
+								'show_option_none' => __('&mdash; Select &mdash;')
 							) );
 							?>
 							<script>
 							(function(){
-								var action = document.getElementById('wpuo_lo_action'),
-									pageid = document.getElementById('wpuo_lo_pageid');
+								var action  = document.getElementById('wpuo_logged_out_action'),
+									page_id = document.getElementById('wpuo_logged_out_page_id');
 								function update () {
-									pageid.style.display = ('page' === action.value ? 'inline' : 'none');
+									page_id.disabled = ( 'page' !== action.value );
 								};
 								action.onchange = update;
 								update();
@@ -112,7 +107,7 @@ class Users_Only_Settings extends Users_Only {
 		<?php
 	}
 
-	public static function save_options () {
+	public static function wp_save_options () {
 
 		/* Nonce Validation */
 		if ( empty( $_POST['wpuo_nonce'] ) || ! wp_verify_nonce( $_POST['wpuo_nonce'], plugin_basename( __FILE__ ) ) )
@@ -123,15 +118,17 @@ class Users_Only_Settings extends Users_Only {
 			return;
 
 		/* Save options */
-		update_option( 'wpuo_li_disabledashboard', empty( $_POST['wpuo_li_disabledashboard'] ) ? array() : $_POST['wpuo_li_disabledashboard'] );
-		update_option( 'wpuo_lo_action', empty( $_POST['wpuo_lo_action'] ) ? '' : $_POST['wpuo_lo_action'] );
-		update_option( 'wpuo_lo_pageid', empty( $_POST['wpuo_lo_pageid'] ) ? '' : $_POST['wpuo_lo_pageid'] );
+		update_option( 'wp_users_only', array(
+			'logged_out_action'  => empty( $_POST['wpuo_logged_out_action'] )  ? ''      : $_POST['wpuo_logged_out_action'],
+			'logged_out_page_id' => empty( $_POST['wpuo_logged_out_page_id'] ) ? 0       : (int) $_POST['wpuo_logged_out_page_id'],
+			'disable_dashboard'  => empty( $_POST['wpuo_disable_dashboard'] )  ? array() : (array) $_POST['wpuo_disable_dashboard']
+		) );
 
 		wp_redirect( admin_url('options-general.php?page=users-only&updated=true') );
 
 	}
 
-	public static function add_settings_link ( $links, $file ) {
+	public static function filter_add_settings_link ( $links, $file ) {
 
 		if ( strstr( __FILE__, $file ) )
 			array_push( $links, '<a href="' . admin_url('options-general.php?page=users-only') . '">' . __('Settings') . '</a>' );

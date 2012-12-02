@@ -15,8 +15,8 @@ class Users_Only_Shortcodes extends Users_Only {
 	public static function login_form_shortcode () {
 
 		if ( ! parent::$current_user->ID )
-			return wp_login_form ( array (
-				'echo' => false,
+			return wp_login_form( array (
+				'echo'     => false,
 				'redirect' => isset( $_GET['ref'] ) ? $_GET['ref'] : home_url()
 			) );
 

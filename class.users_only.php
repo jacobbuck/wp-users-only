@@ -1,21 +1,27 @@
 <?php
 class Users_Only {
 
+	public static $options;
+
 	protected static $is_disable_dashboard;
 	protected static $current_user;
 
 	static function initialize () {
 
+		/* Add Actions */
 		add_action( 'init', array( 'Users_Only', 'wp_init'), 5 );
-		add_action( 'admin_init', array( 'Users_Only', 'admin_init') );
-		add_action( 'login_head', array( 'Users_Only', 'login_head') );
-		add_action( 'template_redirect', array( 'Users_Only', 'template_redirect') );
+		add_action( 'admin_init', array( 'Users_Only', 'wp_admin_init') );
+		add_action( 'login_head', array( 'Users_Only', 'wp_login_head') );
+		add_action( 'template_redirect', array( 'Users_Only', 'wp_template_redirect') );
+
+		/* Get Options */
+		self::$options = get_option( 'wp_users_only', array(
+			'logged_out_action'  => '',
+			'logged_out_page_id' => 0,
+			'disable_dashboard'  => array()
+		) );
 
 	}
-
-	/**
-	 * Users Only
-	 */
 
 	public static function wp_init () {
 
@@ -28,8 +34,7 @@ class Users_Only {
 			0 !== self::$current_user->ID
 			&& ! in_array( 'administrator', self::$current_user->caps )
 		) {
-			$li_disabledashboard = (array) get_option('wpuo_li_disabledashboard');
-			foreach ( $li_disabledashboard as $role ) {
+			foreach ( (array) self::$options['disable_dashboard'] as $role ) {
 				if ( self::$current_user->has_cap( $role ) ) {
 					self::$is_disable_dashboard = true;
 					break;
@@ -44,7 +49,7 @@ class Users_Only {
 
 	}
 
-	public static function admin_init () {
+	public static function wp_admin_init () {
 		if ( self::$is_disable_dashboard ) {
 			/* Redirect if user can't access dashboard */
 			wp_redirect( home_url(), 302 );
@@ -52,21 +57,21 @@ class Users_Only {
 		}
 	}
 
-	public static function login_head () {
-		if ( 'wp-login' === get_option('wpuo_lo_action') ) {
+	public static function wp_login_head () {
+		if ( 'wp-login' === self::$options['logged_out_action'] ) {
 			/* Hide back to blog link */
 			echo '<style>#backtoblog{display:none}</style>';
 		}
 	}
 
-	public static function template_redirect () {
+	public static function wp_template_redirect () {
 
 		/* Check if user logged in */
 		if ( self::$current_user->ID )
 			return;
 
 		/* Do action */
-		switch ( get_option('wpuo_lo_action') ) {
+		switch ( self::$options['logged_out_action'] ) {
 			case '':
 				/**
 				 * Do nothing
@@ -83,17 +88,16 @@ class Users_Only {
 				/**
 				 * Redirect to page
 				 */
-				$lo_pageid = get_option('wpuo_lo_pageid');
 				/* Check if we're already on the page */
-				if ( ! is_page() || get_the_ID() != $lo_pageid ) {
-					/* Otherwise redirect to the page */
-					$redirect_to = get_permalink( $lo_pageid );
-					/* Add referer query to redirect url */
-					if ( untrailingslashit( $_SERVER['REQUEST_URI'] ) )
-						$redirect_to = add_query_arg( 'ref', urlencode( home_url( $_SERVER['REQUEST_URI'] ) ), $redirect_to );
-					if ( false !== wp_redirect( $redirect_to, 302 ) )
-						exit;
-				}
+				if ( is_page() && get_the_ID() === self::$options['logged_out_page_id'] )
+					break;
+				/* Otherwise redirect to the page */
+				$redirect_to = get_permalink( self::$options['logged_out_page_id'] );
+				/* Add referer query to redirect url */
+				if ( untrailingslashit( $_SERVER['REQUEST_URI'] ) )
+					$redirect_to = add_query_arg( 'ref', urlencode( home_url( $_SERVER['REQUEST_URI'] ) ), $redirect_to );
+				wp_redirect( $redirect_to, 302 );
+				exit;
 				break;
 			case 'holding':
 				/**
